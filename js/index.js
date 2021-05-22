@@ -1,6 +1,6 @@
 var attributes = {
     length: 0,
-    vectorB: [],
+    vectorB: null,
     coefficients: [{}],
     answers: []
 }
@@ -8,31 +8,23 @@ var attributes = {
 var components = {
     dimensao: document.getElementById("dimensao"),
     elemMatrix: document.getElementById("elementos_cx"),
-    calculate: "",
+    calculate: document.getElementById("calculate"),
     matrix: "",
     contentResp: document.getElementById("resp")
 }
 
-function toUpperTriangular() {
+function toUpperTriangular(m) {
     let M = [{}];
-    M = Object.assign(M, attributes.coefficients);
-    let n = attributes.coefficients.length;
-    let np = attributes.coefficients[0].length;
+    M = Object.assign(M, m);
+    let n = m.length;
+    let np = m[0].length;
     let p;
 
     for (let i = 0; i < n; i++) {
         if (M[i][i] == 0) {
-            for (let k = i + 1; k < n; k++) {
-                if (M[k][i] != 0) {
-                    let els = [];
-                    for (p = 0; p < np; p++) {
-                        els.push(M[i][p] + M[k][p]);
-                    }
-                    attributes.vectorB[i] = attributes.vectorB[i] + attributes.vectorB[k]
-                    M[i] = els;
-                    break;
-                }
-            }
+            components.contentResp.innerText = `Não é possível resolver o sistema apenas com a eliminação de gauss.\n
+            Utilize a eliminação de gauss com pivotação para esse sistema!`
+            return 0;
         } else {
             for (let j = i + 1; j < n; j++) {
                 let multiplier = M[j][i] / M[i][i];
@@ -51,7 +43,6 @@ function toUpperTriangular() {
         }
     }
 
-    attributes.coefficients = M;
     return M;
 }
 
@@ -65,7 +56,7 @@ function calculateDeterminant(m) {
     return det;
 }
 
-function printMatrix() {
+function printMatrix(m) {
     let row = '';
 
     for (let i = 0; i < attributes.length; i++) {
@@ -73,7 +64,7 @@ function printMatrix() {
             if (j == attributes.length) {
                 row += `= ${attributes.vectorB[i]} \n`;
             } else {
-                row += `${attributes.coefficients[i][j]} `;
+                row += `${m[i][j]} `;
             }
         }
     }
@@ -90,7 +81,7 @@ function anteriores(i) {
     return soma;
 }
 
-function solveSystem() {
+function solveSystem(m) {
     for (let i = 0; i < attributes.length; i++) {
         attributes.answers[i] = 0;
     }
@@ -98,9 +89,9 @@ function solveSystem() {
     let j = attributes.length - 1;
 
     for (let i = attributes.length - 1; i >= 0; i--, j--) {
-        attributes.answers[j] = Number.isInteger(((attributes.vectorB[j] - anteriores(i)) / attributes.coefficients[i][j])) ?
-            ((attributes.vectorB[j] - anteriores(i)) / attributes.coefficients[i][j]) :
-            ((attributes.vectorB[j] - anteriores(i)) / attributes.coefficients[i][j]).toFixed(3);
+        attributes.answers[j] = Number.isInteger(((attributes.vectorB[j] - anteriores(i)) / m[i][j])) ?
+            ((attributes.vectorB[j] - anteriores(i)) / m[i][j]) :
+            ((attributes.vectorB[j] - anteriores(i)) / m[i][j]).toFixed(3);
     }
 
     let xs = '';
@@ -118,26 +109,29 @@ function clearAttributes() {
     attributes.vectorB = [];
     attributes.coefficients = [{}];
     attributes.length = 0;
+    attributes.answers = [];
 }
 
 function calculateSystem(m) {
     components.contentResp.style.display = 'block';
     attributes.answers = new Array(Number(components.dimensao.value),);
 
-    m = toUpperTriangular();
+    m = toUpperTriangular(m);
 
-    if (calculateDeterminant(m) == 0) {
-        printMatrix();
-        components.contentResp.innerText = "Matriz singular! \n Não possui solução!"
-    } else {
-        printMatrix();
-        solveSystem();
-    }
-
-    clearAttributes();
+    if (m != 0) {
+        if (calculateDeterminant(m) == 0) {
+            printMatrix();
+            components.contentResp.innerText = "Matriz singular! \n Não possui solução!"
+        } else {
+            printMatrix(m);
+            solveSystem(m);
+        }
+    } 
 }
 
-function getElements() {
+function getElements(tam) {
+    clearAttributes(); 
+    attributes.length = tam;
     attributes.vectorB = [attributes.length];
     let columns = [];
     let column = [];
@@ -167,12 +161,9 @@ function createFields(tam) {
     components.contentResp.style.display = 'none';
 
     if (components.elemMatrix.hasChildNodes) {
-        while (components.elemMatrix.firstChild) {
-            components.elemMatrix.removeChild(components.elemMatrix.lastChild);
-        }
+            components.elemMatrix.removeChild(components.elemMatrix.firstChild);
     }
 
-    attributes.length = tam;
     let matrix = document.createElement("table");
 
     // create header table
@@ -210,20 +201,8 @@ function createFields(tam) {
         matrix.appendChild(mRow);
     }
 
-    components.elemMatrix.appendChild(matrix)
-
-    let calculate = document.getElementById("btnCalculate");
-
-    if (typeof (calculate) == 'undefined' || calculate == null) {
-        calculate = document.createElement("button");
-        calculate.innerText = "Calcular";
-        calculate.setAttribute("class", "btn");
-        components.elemMatrix.appendChild(calculate);
-        components.calculate = calculate;
-        calculate.addEventListener("click", () => {
-            getElements();
-        })
-    }
+    components.elemMatrix.insertBefore(matrix, components.elemMatrix.firstChild);
+    components.calculate.disabled = false;
 
     components.matrix = matrix;
 }
@@ -239,4 +218,6 @@ window.addEventListener("load", function (e) {
             components.dimensao.blur();
         }
     })
+
+    components.calculate.addEventListener("click", () => getElements(Number(components.dimensao.value)));
 })
